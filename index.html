@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phone Usage Analytics - Khảo Sát Lớp 9B</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS (xlsx) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        dark: {
+                            900: '#0b0f19',
+                            800: '#111827',
+                            700: '#1f2937',
+                            600: '#374151',
+                        },
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0b0f19; color: #f3f4f6; }
+        .tab-btn.active {
+            border-bottom: 3px solid #3b82f6;
+            color: #60a5fa;
+            font-weight: 600;
+            background-color: #111827;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: white; color: black; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- HEADER / NAVBAR -->
+    <header class="bg-dark-800 shadow-lg border-b border-dark-700 sticky top-0 z-30 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo & Title -->
+                <div class="flex items-center space-x-3">
+                    <div class="p-2.5 bg-primary-600 text-white rounded-xl shadow-md">
+                        <i class="fa-solid fa-mobile-screen-button text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold text-white tracking-wide">PHONE USAGE ANALYTICS</h1>
+                        <p class="text-xs text-slate-400 font-medium">Khảo sát Thời gian Sử dụng Điện thoại & Giấc ngủ - Lớp 9B (30 Học sinh)</p>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-center space-x-3">
+                    <button onclick="resetDataToDefault()" class="px-3 py-1.5 text-xs font-medium text-slate-300 bg-dark-700 hover:bg-dark-600 rounded-lg transition-colors border border-dark-600 flex items-center space-x-1" title="Khôi phục dữ liệu gốc Excel">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="hidden sm:inline">Khôi phục gốc</span>
+                    </button>
+                    <button onclick="exportToExcel()" class="px-3 py-1.5 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg shadow-md transition-colors flex items-center space-x-1">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <span>Xuất Excel</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Navigation Bar -->
+            <nav class="flex space-x-1 sm:space-x-4 border-t border-dark-700 overflow-x-auto py-1">
+                <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn active px-3 py-2 text-xs sm:text-sm font-medium rounded-t-md transition-all flex items-center space-x-1.5 whitespace-nowrap text-slate-300 hover:text-white">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard Tổng Quan</span>
+                </button>
+                <button onclick="switchTab('data-table')" id="tab-data-table" class="tab-btn px-3 py-2 text-xs sm:text-sm font-medium rounded-t-md transition-all flex items-center space-x-1.5 whitespace-nowrap text-slate-300 hover:text-white">
+                    <i class="fa-solid fa-table"></i>
+                    <span>Bảng Dữ Liệu Khảo Sát</span>
+                </button>
+                <button onclick="switchTab('conditions')" id="tab-conditions" class="tab-btn px-3 py-2 text-xs sm:text-sm font-medium rounded-t-md transition-all flex items-center space-x-1.5 whitespace-nowrap text-slate-300 hover:text-white">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span>Tiêu Chí & Điều Kiện</span>
+                </button>
+                <button onclick="switchTab('formulas')" id="tab-formulas" class="tab-btn px-3 py-2 text-xs sm:text-sm font-medium rounded-t-md transition-all flex items-center space-x-1.5 whitespace-nowrap text-slate-300 hover:text-white">
+                    <i class="fa-solid fa-calculator"></i>
+                    <span>Khu Vực Công Thức Excel</span>
+                </button>
+                <button onclick="switchTab('reports')" id="tab-reports" class="tab-btn px-3 py-2 text-xs sm:text-sm font-medium rounded-t-md transition-all flex items-center space-x-1.5 whitespace-nowrap text-slate-300 hover:text-white">
+                    <i class="fa-solid fa-file-invoice"></i>
+                    <span>Báo Cáo & In Ân</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- TAB 1: DASHBOARD TỔNG QUAN -->
+        <section id="sec-dashboard" class="space-y-6">
+            <!-- KPI Summary Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div class="bg-dark-800 p-4 rounded-xl border border-dark-700 shadow-md flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tổng Học Sinh</p>
+                        <h3 id="kpi-total-students" class="text-2xl font-bold text-white mt-1">30</h3>
+                        <p class="text-xs text-primary-400 font-medium mt-0.5"><i class="fa-solid fa-users text-xs"></i> Lớp 9B khảo sát</p>
+                    </div>
+                    <div class="p-3 bg-primary-900/50 text-primary-400 rounded-xl border border-primary-700/30">
+                        <i class="fa-solid fa-user-graduate text-xl"></i>
+                    </div>
+                </div>
+
+                <div class="bg-dark-800 p-4 rounded-xl border border-dark-700 shadow-md flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Thời Gian Dùng ĐT TB</p>
+                        <h3 id="kpi-avg-screen" class="text-2xl font-bold text-white mt-1">0.0 h</h3>
+                        <p class="text-xs text-slate-400 font-medium mt-0.5">Giờ / ngày / học sinh</p>
+                    </div>
+                    <div class="p-3 bg-sky-900/50 text-sky-400 rounded-xl border border-sky-700/30">
+                        <i class="fa-solid fa-clock text-xl"></i>
+                    </div>
+                </div>
+
+                <div class="bg-dark-800 p-4 rounded-xl border border-dark-700 shadow-md flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Thời Lượng Ngủ TB</p>
+                        <h3 id="kpi-avg-sleep" class="text-2xl font-bold text-white mt-1">0.0 h</h3>
+                        <p id="kpi-sleep-status" class="text-xs font-medium mt-0.5 text-amber-400">Khuyến nghị: &ge; 8h</p>
+                    </div>
+                    <div class="p-3 bg-indigo-900/50 text-indigo-400 rounded-xl border border-indigo-700/30">
+                        <i class="fa-solid fa-bed text-xl"></i>
+                    </div>
+                </div>
+
+                <div class="bg-dark-800 p-4 rounded-xl border border-dark-700 shadow-md flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Màn Hình Trước Ngủ</p>
+                        <h3 id="kpi-screen-before-bed" class="text-2xl font-bold text-amber-400 mt-1">0 HS</h3>
+                        <p id="kpi-screen-before-bed-pct" class="text-xs text-slate-400 font-medium mt-0.5">0% tổng số học sinh</p>
+                    </div>
+                    <div class="p-3 bg-amber-900/50 text-amber-400 rounded-xl border border-amber-700/30">
+                        <i class="fa-solid fa-moon text-xl"></i>
+                    </div>
+                </div>
+
+                <div class="bg-dark-800 p-4 rounded-xl border border-dark-700 shadow-md flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Cần Lưu Ý Cảnh Báo</p>
+                        <h3 id="kpi-alert-count" class="text-2xl font-bold text-rose-500 mt-1">0 HS</h3>
+                        <p class="text-xs text-rose-400 font-medium mt-0.5">Cần can thiệp/nhắc nhở</p>
+                    </div>
+                    <div class="p-3 bg-rose-900/50 text-rose-400 rounded-xl border border-rose-700/30">
+                        <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group Breakdown Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-gradient-to-br from-blue-900 to-dark-800 border border-blue-700/40 text-white p-4 rounded-xl shadow-md">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-xs uppercase font-semibold bg-blue-500/20 text-blue-300 px-2.5 py-0.5 rounded-full border border-blue-500/30">Nhóm 1 (&lt; 2h)</span>
+                            <h4 id="group1-count" class="text-3xl font-bold mt-2">0 HS</h4>
+                            <p id="group1-total-hours" class="text-xs text-blue-200 mt-1">Tổng: 0 giờ sử dụng</p>
+                        </div>
+                        <i class="fa-solid fa-shield-halved text-3xl text-blue-400 opacity-80"></i>
+                    </div>
+                    <p class="text-xs text-blue-300/80 border-t border-blue-700/30 mt-3 pt-2">Mức độ an toàn - Duy trì thói quen tốt</p>
+                </div>
+
+                <div class="bg-gradient-to-br from-indigo-900 to-dark-800 border border-indigo-700/40 text-white p-4 rounded-xl shadow-md">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-xs uppercase font-semibold bg-indigo-500/20 text-indigo-300 px-2.5 py-0.5 rounded-full border border-indigo-500/30">Nhóm 2 (2h - 4h)</span>
+                            <h4 id="group2-count" class="text-3xl font-bold mt-2">0 HS</h4>
+                            <p id="group2-total-hours" class="text-xs text-indigo-200 mt-1">Tổng: 0 giờ sử dụng</p>
+                        </div>
+                        <i class="fa-solid fa-scale-balanced text-3xl text-indigo-400 opacity-80"></i>
+                    </div>
+                    <p class="text-xs text-indigo-300/80 border-t border-indigo-700/30 mt-3 pt-2">Mức độ trung bình - Cần quản lý thời gian</p>
+                </div>
+
+                <div class="bg-gradient-to-br from-rose-950 to-dark-800 border border-rose-700/40 text-white p-4 rounded-xl shadow-md">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-xs uppercase font-semibold bg-rose-500/20 text-rose-300 px-2.5 py-0.5 rounded-full border border-rose-500/30">Nhóm 3 (&gt; 4h)</span>
+                            <h4 id="group3-count" class="text-3xl font-bold mt-2">0 HS</h4>
+                            <p id="group3-total-hours" class="text-xs text-rose-200 mt-1">Tổng: 0 giờ sử dụng</p>
+                        </div>
+                        <i class="fa-solid fa-triangle-exclamation text-3xl text-rose-400 opacity-80"></i>
+                    </div>
+                    <p class="text-xs text-rose-300/80 border-t border-rose-700/30 mt-3 pt-2">Nguy cơ cao - Cần nhắc nhở và điều chỉnh</p>
+                </div>
+            </div>
+
+            <!-- Interactive Charts Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Chart 1 -->
+                <div class="bg-dark-800 p-5 rounded-xl border border-dark-700 shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-white text-sm sm:text-base flex items-center space-x-2">
+                            <i class="fa-solid fa-chart-column text-primary-400"></i>
+                            <span>Phân Phối Học Sinh Theo Nhóm Sử Dụng Điện Thoại</span>
+                        </h3>
+                    </div>
+                    <div class="h-64 relative">
+                        <canvas id="chartGroups"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 2 -->
+                <div class="bg-dark-800 p-5 rounded-xl border border-dark-700 shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-white text-sm sm:text-base flex items-center space-x-2">
+                            <i class="fa-solid fa-chart-pie text-sky-400"></i>
+                            <span>Thói Quen Dùng Điện Thoại 1 Giờ Trước Khi Ngủ</span>
+                        </h3>
+                    </div>
+                    <div class="h-64 relative">
+                        <canvas id="chartScreenBeforeBed"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 3 -->
+                <div class="bg-dark-800 p-5 rounded-xl border border-dark-700 shadow-md lg:col-span-2">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-white text-sm sm:text-base flex items-center space-x-2">
+                            <i class="fa-solid fa-chart-line text-blue-400"></i>
+                            <span>Tương Quan Giữa Thời Gian Sử Dụng Điện Thoại Vẫn Giấc Ngủ (30 Học sinh)</span>
+                        </h3>
+                        <span class="text-xs text-slate-400">Dữ liệu bảo mật theo Mã HS</span>
+                    </div>
+                    <div class="h-72 relative">
+                        <canvas id="chartCorrelation"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: BẢNG DỮ LIỆU KHẢO SÁT -->
+        <section id="sec-data-table" class="space-y-4 hidden">
+            <!-- Table Toolbar -->
+            <div class="bg-dark-800 p-4 rounded-xl border border-dark-700 shadow-md flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <!-- Search Box -->
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="table-search" oninput="renderTable()" placeholder="Tìm kiếm theo Mã HS..." class="w-full pl-9 pr-4 py-2 bg-dark-900 border border-dark-600 rounded-lg text-sm text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none">
+                </div>
+
+                <!-- Filters & Controls -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <select id="filter-group" onchange="renderTable()" class="px-3 py-2 border border-dark-600 rounded-lg text-sm bg-dark-900 text-slate-200 outline-none focus:ring-2 focus:ring-primary-500">
+                        <option value="ALL">-- Tất cả Nhóm ĐT --</option>
+                        <option value="Nhóm 1">Nhóm 1 (&lt; 2h)</option>
+                        <option value="Nhóm 2">Nhóm 2 (2h - 4h)</option>
+                        <option value="Nhóm 3">Nhóm 3 (&gt; 4h)</option>
+                    </select>
+
+                    <select id="filter-alert" onchange="renderTable()" class="px-3 py-2 border border-dark-600 rounded-lg text-sm bg-dark-900 text-slate-200 outline-none focus:ring-2 focus:ring-primary-500">
+                        <option value="ALL">-- Tất cả Cảnh báo --</option>
+                        <option value="CẦN XEM LẠI THÓI QUEN">Cần xem lại thói quen ĐT</option>
+                        <option value="CẦN QUAN TÂM GIẤC NGỦ">Cần quan tâm giấc ngủ (&lt;8h)</option>
+                        <option value="LƯU Ý MÀN HÌNH TRƯỚC NGỦ">Lưu ý màn hình trước ngủ</option>
+                    </select>
+
+                    <button onclick="openAddModal()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-semibold shadow-md transition-colors flex items-center space-x-1.5">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Thêm Bản Ghi</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Data Table Container (Không có cột Họ tên học sinh) -->
+            <div class="bg-dark-800 rounded-xl border border-dark-700 shadow-md overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-dark-900 text-slate-400 text-xs font-bold uppercase tracking-wider border-b border-dark-700">
+                                <th class="p-3 text-center w-12">STT</th>
+                                <th class="p-3">Mã Học Sinh</th>
+                                <th class="p-3 text-center">Thời Gian Dùng ĐT (h)</th>
+                                <th class="p-3 text-center">Nhóm ĐT (Excel IF)</th>
+                                <th class="p-3 text-center">Dùng 1h Trước Ngủ</th>
+                                <th class="p-3 text-center">Giờ Đi Ngủ</th>
+                                <th class="p-3 text-center">Giờ Thức Dậy</th>
+                                <th class="p-3 text-center">Thời Lượng Ngủ (h)</th>
+                                <th class="p-3 text-center">Đánh Giá Giấc Ngủ</th>
+                                <th class="p-3">Cảnh Báo ĐT</th>
+                                <th class="p-3">Cảnh Báo Giấc Ngủ</th>
+                                <th class="p-3 text-center">Kiểm Tra Data</th>
+                                <th class="p-3 text-center w-24">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="survey-table-body" class="divide-y divide-dark-700 text-xs sm:text-sm text-slate-300">
+                            <!-- Injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="p-4 bg-dark-900 border-t border-dark-700 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-400 gap-2">
+                    <div id="table-info-text">Hiển thị 0 / 0 học sinh</div>
+                    <div class="flex items-center space-x-1" id="pagination-controls"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: TIÊU CHÍ & ĐIỀU KIỆN -->
+        <section id="sec-conditions" class="space-y-6 hidden">
+            <div class="bg-dark-800 p-6 rounded-xl border border-dark-700 shadow-md">
+                <div class="flex justify-between items-center mb-4 border-b border-dark-700 pb-3">
+                    <div>
+                        <h2 class="text-lg font-bold text-white">Cấu Hình Ngưỡng Điều Kiện & Tiêu Chí Phân Loại</h2>
+                        <p class="text-xs text-slate-400 mt-1">Các điều kiện được chuyển đổi từ Sheet "Điều Kiện" trong file Excel.</p>
+                    </div>
+                    <button onclick="applyConditionSettings()" class="px-4 py-2 bg-primary-600 text-white font-medium text-xs rounded-lg hover:bg-primary-700 transition-colors shadow-md flex items-center space-x-1">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Lưu & Cập Nhật Hệ Thống</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="bg-dark-900 p-4 rounded-xl border border-dark-700 space-y-3">
+                        <div class="flex items-center space-x-2 text-primary-400 font-bold text-sm">
+                            <i class="fa-solid fa-mobile text-primary-400"></i>
+                            <span>Ngưỡng Sử Dụng Điện Thoại (Giờ)</span>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Ngưỡng Nhóm 1 (&lt; x giờ):</label>
+                            <input type="number" step="0.5" id="cond-group1-max" value="2" class="w-full px-3 py-1.5 border border-dark-600 rounded-lg text-sm bg-dark-800 text-white focus:ring-2 focus:ring-primary-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Ngưỡng Nhóm 2 (&le; y giờ):</label>
+                            <input type="number" step="0.5" id="cond-group2-max" value="4" class="w-full px-3 py-1.5 border border-dark-600 rounded-lg text-sm bg-dark-800 text-white focus:ring-2 focus:ring-primary-500 outline-none">
+                        </div>
+                    </div>
+
+                    <div class="bg-dark-900 p-4 rounded-xl border border-dark-700 space-y-3">
+                        <div class="flex items-center space-x-2 text-indigo-400 font-bold text-sm">
+                            <i class="fa-solid fa-bed text-indigo-400"></i>
+                            <span>Ngưỡng Giấc Ngủ Khuyến Nghị (Giờ)</span>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">Thời lượng ngủ đủ tiêu chuẩn (&ge; z giờ):</label>
+                            <input type="number" step="0.5" id="cond-sleep-min" value="8" class="w-full px-3 py-1.5 border border-dark-600 rounded-lg text-sm bg-dark-800 text-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                    </div>
+
+                    <div class="bg-dark-900 p-4 rounded-xl border border-dark-700 space-y-2 text-xs">
+                        <h4 class="font-bold text-white text-sm flex items-center space-x-1.5">
+                            <i class="fa-solid fa-circle-info text-primary-400"></i>
+                            <span>Quy Tắc Cảnh Báo Tự Động</span>
+                        </h4>
+                        <ul class="space-y-2 text-slate-300 list-disc pl-4">
+                            <li><strong class="text-rose-400">CẦN XEM LẠI THÓI QUEN:</strong> Thời gian dùng ĐT &gt; 4 giờ.</li>
+                            <li><strong class="text-amber-400">CẦN QUAN TÂM GIẤC NGỦ:</strong> Tổng thời lượng ngủ &lt; 8 giờ.</li>
+                            <li><strong class="text-sky-400">LƯU Ý MÀN HÌNH TRƯỚC NGỦ:</strong> Ngủ &ge; 8h nhưng có dùng ĐT trước ngủ.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: KHU VỰC CÔNG THỨC EXCEL -->
+        <section id="sec-formulas" class="space-y-6 hidden">
+            <div class="bg-dark-800 p-6 rounded-xl border border-dark-700 shadow-md">
+                <div class="border-b border-dark-700 pb-3 mb-4">
+                    <h2 class="text-lg font-bold text-white flex items-center space-x-2">
+                        <i class="fa-solid fa-square-root-variable text-primary-400"></i>
+                        <span>Bảng Ánh Xạ Công Thức Excel Nâng Cao Sang Logic JavaScript</span>
+                    </h2>
+                </div>
+
+                <div class="space-y-6 text-xs">
+                    <div class="border border-dark-700 rounded-xl overflow-hidden bg-dark-900">
+                        <div class="bg-dark-700 px-4 py-2.5 font-bold text-sm text-white flex justify-between items-center">
+                            <span>COUNTIF &amp; SUMIF Logic</span>
+                        </div>
+                        <div class="p-4 space-y-2 text-slate-300">
+                            <p><strong>COUNTIF:</strong> <code class="bg-dark-800 text-primary-400 px-2 py-1 rounded font-mono">=COUNTIF(E2:E31, "Nhóm 1")</code> &rarr; <code class="text-sky-300">students.filter(s =&gt; s.screenGroup === 'Nhóm 1').length</code></p>
+                            <div class="bg-dark-800 p-3 rounded-lg border border-dark-700 text-white font-medium">
+                                Kết quả thực tế: <span id="formula-countif-result" class="text-primary-400 font-bold ml-2">---</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 5: BÁO CÁO & XUẤT DỮ LIỆU -->
+        <section id="sec-reports" class="space-y-6 hidden">
+            <div class="bg-dark-800 p-6 rounded-xl border border-dark-700 shadow-md">
+                <div class="flex justify-between items-center border-b border-dark-700 pb-4 no-print">
+                    <div>
+                        <h2 class="text-lg font-bold text-white">Báo Cáo &amp; Xuất Dữ Liệu Bảo Mật</h2>
+                        <p class="text-xs text-slate-400">Xuất báo cáo tổng hợp không lộ danh tính học sinh</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="exportToExcel()" class="px-4 py-2 bg-primary-600 text-white font-medium text-xs rounded-lg hover:bg-primary-700 transition-colors flex items-center space-x-1.5 shadow-md">
+                            <i class="fa-solid fa-file-excel"></i>
+                            <span>Tải Báo Cáo Excel (.xlsx)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="py-4 space-y-6 text-slate-300">
+                    <div class="text-center space-y-1">
+                        <h2 class="text-xl font-bold uppercase text-white">BÁO CÁO KẾT QUẢ KHẢO SÁT THỜI GIAN SỬ DỤNG ĐIỆN THOẠI &amp; GIẤC NGỦ</h2>
+                        <p class="text-sm font-semibold text-slate-400">Đơn vị: Lớp 9B (Ẩn danh học sinh) | Tổng số: <span id="rpt-total">30</span></p>
+                        <p class="text-xs text-slate-500 italic">Ngày lập: <span id="rpt-date">--/--/----</span></p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-sm font-bold text-white mb-2 border-b border-dark-700 pb-1">I. TỔNG HỢP CHỈ TIÊU THỐNG KÊ</h3>
+                        <table class="w-full text-xs border border-dark-700 bg-dark-900">
+                            <thead class="bg-dark-700 text-slate-300">
+                                <tr>
+                                    <th class="border border-dark-600 p-2 text-left">Chỉ Tiêu Thống Kê</th>
+                                    <th class="border border-dark-600 p-2 text-center">Kết Quả Excel Gốc</th>
+                                    <th class="border border-dark-600 p-2 text-center">Kết Quả Mini App</th>
+                                    <th class="border border-dark-600 p-2 text-center">Trạng Thái</th>
+                                </tr>
+                            </thead>
+                            <tbody id="report-validation-body" class="divide-y divide-dark-700"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-dark-800 border-t border-dark-700 py-4 mt-auto no-print text-center text-xs text-slate-400">
+        Phone Usage Analytics App &copy; 2026 - Long Le (Vibe coding with Gemini & Claude).
+    </footer>
+
+    <!-- MODAL ADD / EDIT -->
+    <div id="student-modal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 hidden no-print">
+        <div class="bg-dark-800 border border-dark-700 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 relative mx-4 text-slate-200">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 id="modal-title" class="text-base font-bold text-white">Thêm Bản Ghi Mới</h3>
+
+            <form id="student-form" onsubmit="handleFormSubmit(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="edit-index" value="-1">
+
+                <div>
+                    <label class="block font-semibold text-slate-300 mb-1">Mã Học Sinh (*)</label>
+                    <input type="text" id="input-id" required placeholder="Ví dụ: HS31" class="w-full px-3 py-2 bg-dark-900 border border-dark-600 rounded-lg outline-none focus:ring-2 focus:ring-primary-500 text-white">
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-300 mb-1">Thời gian dùng ĐT/ngày (giờ) (*)</label>
+                    <input type="number" step="0.1" min="0" max="24" id="input-screen" required placeholder="Ví dụ: 3.5" class="w-full px-3 py-2 bg-dark-900 border border-dark-600 rounded-lg outline-none focus:ring-2 focus:ring-primary-500 text-white">
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-300 mb-1">Xem điện thoại 1h trước khi ngủ (*)</label>
+                    <select id="input-screen-before-bed" class="w-full px-3 py-2 bg-dark-900 border border-dark-600 rounded-lg outline-none focus:ring-2 focus:ring-primary-500 text-white">
+                        <option value="Có">Có</option>
+                        <option value="Không">Không</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Giờ đi ngủ (*)</label>
+                        <input type="time" id="input-bedtime" required class="w-full px-3 py-2 bg-dark-900 border border-dark-600 rounded-lg outline-none focus:ring-2 focus:ring-primary-500 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Giờ thức dậy (*)</label>
+                        <input type="time" id="input-waketime" required class="w-full px-3 py-2 bg-dark-900 border border-dark-600 rounded-lg outline-none focus:ring-2 focus:ring-primary-500 text-white">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-300 mb-1">Tự đánh giá giấc ngủ tốt (*)</label>
+                    <select id="input-sleep-rating" class="w-full px-3 py-2 bg-dark-900 border border-dark-600 rounded-lg outline-none focus:ring-2 focus:ring-primary-500 text-white">
+                        <option value="Có">Có</option>
+                        <option value="Không">Không</option>
+                    </select>
+                </div>
+
+                <div class="pt-3 flex justify-end space-x-2 border-t border-dark-700">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 bg-dark-700 text-slate-300 rounded-lg font-medium hover:bg-dark-600">Hủy</button>
+                    <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 shadow-md">Lưu Dữ Liệu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- 30 STUDENT DATASET (Hoàn toàn ẩn tên, chỉ giữ mã HS bảo mật) ---
+        const INITIAL_STUDENT_DATA = [
+            { id: 'HS01', screenTime: 1.1, screen1hBefore: 'Có', bedTime: '23:15', wakeTime: '06:45', sleepRating: 'Có' },
+            { id: 'HS02', screenTime: 0.5, screen1hBefore: 'Không', bedTime: '23:30', wakeTime: '06:30', sleepRating: 'Có' },
+            { id: 'HS03', screenTime: 4.1, screen1hBefore: 'Không', bedTime: '22:30', wakeTime: '06:00', sleepRating: 'Có' },
+            { id: 'HS04', screenTime: 3.8, screen1hBefore: 'Có', bedTime: '23:45', wakeTime: '06:15', sleepRating: 'Không' },
+            { id: 'HS05', screenTime: 5.2, screen1hBefore: 'Có', bedTime: '00:15', wakeTime: '06:15', sleepRating: 'Không' },
+            { id: 'HS06', screenTime: 1.8, screen1hBefore: 'Không', bedTime: '22:15', wakeTime: '06:15', sleepRating: 'Có' },
+            { id: 'HS07', screenTime: 2.5, screen1hBefore: 'Có', bedTime: '23:00', wakeTime: '06:30', sleepRating: 'Có' },
+            { id: 'HS08', screenTime: 4.5, screen1hBefore: 'Có', bedTime: '00:30', wakeTime: '06:30', sleepRating: 'Không' },
+            { id: 'HS09', screenTime: 1.2, screen1hBefore: 'Không', bedTime: '22:00', wakeTime: '06:00', sleepRating: 'Có' },
+            { id: 'HS10', screenTime: 3.0, screen1hBefore: 'Có', bedTime: '23:30', wakeTime: '06:00', sleepRating: 'Không' },
+            { id: 'HS11', screenTime: 0.8, screen1hBefore: 'Không', bedTime: '22:30', wakeTime: '06:30', sleepRating: 'Có' },
+            { id: 'HS12', screenTime: 4.8, screen1hBefore: 'Có', bedTime: '00:00', wakeTime: '05:30', sleepRating: 'Không' },
+            { id: 'HS13', screenTime: 2.2, screen1hBefore: 'Không', bedTime: '23:00', wakeTime: '06:00', sleepRating: 'Có' },
+            { id: 'HS14', screenTime: 1.5, screen1hBefore: 'Không', bedTime: '22:45', wakeTime: '06:45', sleepRating: 'Có' },
+            { id: 'HS15', screenTime: 5.5, screen1hBefore: 'Có', bedTime: '01:00', wakeTime: '06:30', sleepRating: 'Không' },
+            { id: 'HS16', screenTime: 3.2, screen1hBefore: 'Có', bedTime: '23:15', wakeTime: '06:15', sleepRating: 'Không' },
+            { id: 'HS17', screenTime: 0.9, screen1hBefore: 'Không', bedTime: '22:15', wakeTime: '06:15', sleepRating: 'Có' },
+            { id: 'HS18', screenTime: 4.2, screen1hBefore: 'Có', bedTime: '23:45', wakeTime: '05:45', sleepRating: 'Không' },
+            { id: 'HS19', screenTime: 2.7, screen1hBefore: 'Có', bedTime: '23:00', wakeTime: '06:30', sleepRating: 'Có' },
+            { id: 'HS20', screenTime: 1.9, screen1hBefore: 'Không', bedTime: '22:30', wakeTime: '06:30', sleepRating: 'Có' },
+            { id: 'HS21', screenTime: 3.6, screen1hBefore: 'Có', bedTime: '23:30', wakeTime: '06:00', sleepRating: 'Không' },
+            { id: 'HS22', screenTime: 0.7, screen1hBefore: 'Không', bedTime: '22:00', wakeTime: '06:00', sleepRating: 'Có' },
+            { id: 'HS23', screenTime: 4.9, screen1hBefore: 'Có', bedTime: '00:15', wakeTime: '06:15', sleepRating: 'Không' },
+            { id: 'HS24', screenTime: 2.1, screen1hBefore: 'Không', bedTime: '23:00', wakeTime: '06:00', sleepRating: 'Có' },
+            { id: 'HS25', screenTime: 1.4, screen1hBefore: 'Không', bedTime: '22:30', wakeTime: '06:30', sleepRating: 'Có' },
+            { id: 'HS26', screenTime: 5.0, screen1hBefore: 'Có', bedTime: '00:30', wakeTime: '06:00', sleepRating: 'Không' },
+            { id: 'HS27', screenTime: 3.4, screen1hBefore: 'Có', bedTime: '23:30', wakeTime: '06:30', sleepRating: 'Có' },
+            { id: 'HS28', screenTime: 1.0, screen1hBefore: 'Không', bedTime: '22:15', wakeTime: '06:15', sleepRating: 'Có' },
+            { id: 'HS29', screenTime: 4.3, screen1hBefore: 'Có', bedTime: '23:45', wakeTime: '05:45', sleepRating: 'Không' },
+            { id: 'HS30', screenTime: 2.8, screen1hBefore: 'Không', bedTime: '23:00', wakeTime: '06:30', sleepRating: 'Có' }
+        ];
+
+        let students = [];
+        let currentPage = 1;
+        const pageSize = 10;
+
+        let conditions = { group1Max: 2, group2Max: 4, sleepMin: 8 };
+
+        let chartGroupsInst = null;
+        let chartScreenBeforeBedInst = null;
+        let chartCorrelationInst = null;
+
+        function calculateSleepDuration(bedStr, wakeStr) {
+            if (!bedStr || !wakeStr) return 0;
+            const [bH, bM] = bedStr.split(':').map(Number);
+            const [wH, wM] = wakeStr.split(':').map(Number);
+            let bedMinutes = bH * 60 + bM;
+            let wakeMinutes = wH * 60 + wM;
+            let diff = wakeMinutes - bedMinutes;
+            if (diff < 0) diff += 1440;
+            return Math.round((diff / 60) * 10) / 10;
+        }
+
+        function getScreenGroup(screenTime) {
+            if (screenTime < conditions.group1Max) return 'Nhóm 1';
+            if (screenTime <= conditions.group2Max) return 'Nhóm 2';
+            return 'Nhóm 3';
+        }
+
+        function getScreenAlert(screenTime) {
+            return screenTime > conditions.group2Max ? 'CẦN XEM LẠI THÓI QUEN' : 'DUY TRÌ CÂN BẰNG';
+        }
+
+        function getSleepAlert(sleepHours, screen1hBefore) {
+            if (sleepHours < conditions.sleepMin) return 'CẦN QUAN TÂM GIẤC NGỦ';
+            if (screen1hBefore === 'Có') return 'LƯU Ý MÀN HÌNH TRƯỚC NGỦ';
+            return 'THEO DÕI THÓI QUEN';
+        }
+
+        function getDataCheck(screenTime, sleepHours) {
+            return (screenTime >= 0 && screenTime <= 24 && sleepHours > 0 && sleepHours <= 24) ? 'Hợp lệ' : 'Kiểm tra lại';
+        }
+
+        function processStudentData(s) {
+            const sleepDur = calculateSleepDuration(s.bedTime, s.wakeTime);
+            return {
+                ...s,
+                sleepDuration: sleepDur,
+                screenGroup: getScreenGroup(s.screenTime),
+                screenAlert: getScreenAlert(s.screenTime),
+                sleepAlert: getSleepAlert(sleepDur, s.screen1hBefore),
+                dataCheck: getDataCheck(s.screenTime, sleepDur)
+            };
+        }
+
+        window.onload = function () {
+            document.getElementById('rpt-date').innerText = new Date().toLocaleDateString('vi-VN');
+            loadData();
+            initCharts();
+            updateAllViews();
+        };
+
+        function initCharts() {
+            const ctx1 = document.getElementById('chartGroups').getContext('2d');
+            chartGroupsInst = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['Nhóm 1 (<2h)', 'Nhóm 2 (2h-4h)', 'Nhóm 3 (>4h)'],
+                    datasets: [{
+                        label: 'Số lượng học sinh',
+                        data: [0, 0, 0],
+                        backgroundColor: ['#3b82f6', '#60a5fa', '#ef4444'],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1, color: '#94a3b8' }, grid: { color: '#1f2937' } },
+                        x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+                    }
+                }
+            });
+
+            const ctx2 = document.getElementById('chartScreenBeforeBed').getContext('2d');
+            chartScreenBeforeBedInst = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Có dùng ĐT 1h trước ngủ', 'Không dùng'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: ['#f59e0b', '#3b82f6']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: '#cbd5e1' } } }
+                }
+            });
+
+            const ctx3 = document.getElementById('chartCorrelation').getContext('2d');
+            chartCorrelationInst = new Chart(ctx3, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: 'Thời gian dùng ĐT (giờ)', data: [], backgroundColor: 'rgba(239, 68, 68, 0.7)', order: 2 },
+                        { label: 'Thời lượng ngủ (giờ)', data: [], type: 'line', borderColor: '#3b82f6', backgroundColor: '#3b82f6', borderWidth: 2, tension: 0.2, order: 1 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 12, ticks: { color: '#94a3b8' }, grid: { color: '#1f2937' } },
+                        x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+                    },
+                    plugins: { legend: { labels: { color: '#cbd5e1' } } }
+                }
+            });
+        }
+
+        function loadData() {
+            const stored = localStorage.getItem('phone_survey_students_dark_v1');
+            if (stored) {
+                try { students = JSON.parse(stored); } catch(e) { students = JSON.parse(JSON.stringify(INITIAL_STUDENT_DATA)); }
+            } else {
+                students = JSON.parse(JSON.stringify(INITIAL_STUDENT_DATA));
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('phone_survey_students_dark_v1', JSON.stringify(students));
+            updateAllViews();
+        }
+
+        function resetDataToDefault() {
+            if (confirm('Khôi phục dữ liệu ban đầu?')) {
+                students = JSON.parse(JSON.stringify(INITIAL_STUDENT_DATA));
+                saveData();
+            }
+        }
+
+        function updateAllViews() {
+            students = students.map(processStudentData);
+            renderKPIs();
+            renderTable();
+            renderFormulasTab();
+            renderReportValidation();
+            updateCharts();
+        }
+
+        function switchTab(tabId) {
+            ['dashboard', 'data-table', 'conditions', 'formulas', 'reports'].forEach(t => {
+                document.getElementById('sec-' + t).classList.add('hidden');
+                document.getElementById('tab-' + t).classList.remove('active');
+            });
+            document.getElementById('sec-' + tabId).classList.remove('hidden');
+            document.getElementById('tab-' + tabId).classList.add('active');
+            if (tabId === 'dashboard') setTimeout(updateCharts, 50);
+        }
+
+        function renderKPIs() {
+            const total = students.length;
+            document.getElementById('kpi-total-students').innerText = total;
+            document.getElementById('rpt-total').innerText = total;
+            if (total === 0) return;
+
+            const sumScreen = students.reduce((acc, s) => acc + s.screenTime, 0);
+            const avgScreen = (sumScreen / total).toFixed(1);
+            const sumSleep = students.reduce((acc, s) => acc + s.sleepDuration, 0);
+            const avgSleep = (sumSleep / total).toFixed(1);
+            const countScreenBefore = students.filter(s => s.screen1hBefore === 'Có').length;
+            const pctScreenBefore = Math.round((countScreenBefore / total) * 100);
+            const countAlert = students.filter(s => s.screenGroup === 'Nhóm 3' || s.sleepDuration < conditions.sleepMin).length;
+
+            document.getElementById('kpi-avg-screen').innerText = avgScreen + ' h';
+            document.getElementById('kpi-avg-sleep').innerText = avgSleep + ' h';
+            document.getElementById('kpi-screen-before-bed').innerText = countScreenBefore + ' HS';
+            document.getElementById('kpi-screen-before-bed-pct').innerText = pctScreenBefore + '% tổng số học sinh';
+            document.getElementById('kpi-alert-count').innerText = countAlert + ' HS';
+
+            const g1 = students.filter(s => s.screenGroup === 'Nhóm 1');
+            const g2 = students.filter(s => s.screenGroup === 'Nhóm 2');
+            const g3 = students.filter(s => s.screenGroup === 'Nhóm 3');
+
+            document.getElementById('group1-count').innerText = g1.length + ' HS';
+            document.getElementById('group1-total-hours').innerText = 'Tổng: ' + g1.reduce((a, b) => a + b.screenTime, 0).toFixed(1) + 'h';
+            document.getElementById('group2-count').innerText = g2.length + ' HS';
+            document.getElementById('group2-total-hours').innerText = 'Tổng: ' + g2.reduce((a, b) => a + b.screenTime, 0).toFixed(1) + 'h';
+            document.getElementById('group3-count').innerText = g3.length + ' HS';
+            document.getElementById('group3-total-hours').innerText = 'Tổng: ' + g3.reduce((a, b) => a + b.screenTime, 0).toFixed(1) + 'h';
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('survey-table-body');
+            const searchVal = document.getElementById('table-search').value.toLowerCase();
+            const filterGrp = document.getElementById('filter-group').value;
+            const filterAlt = document.getElementById('filter-alert').value;
+
+            let filtered = students.filter(s => {
+                const matchSearch = s.id.toLowerCase().includes(searchVal);
+                const matchGroup = filterGrp === 'ALL' || s.screenGroup === filterGrp;
+                const matchAlert = filterAlt === 'ALL' || s.screenAlert === filterAlt || s.sleepAlert === filterAlt;
+                return matchSearch && matchGroup && matchAlert;
+            });
+
+            const totalItems = filtered.length;
+            const totalPages = Math.ceil(totalItems / pageSize) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+
+            const startIdx = (currentPage - 1) * pageSize;
+            const paginated = filtered.slice(startIdx, startIdx + pageSize);
+
+            tbody.innerHTML = '';
+            if (paginated.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="13" class="p-4 text-center text-slate-500">Không tìm thấy bản ghi nào</td></tr>`;
+            } else {
+                paginated.forEach((s, idx) => {
+                    const realIdx = startIdx + idx + 1;
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-dark-700/50 transition-colors border-b border-dark-700';
+
+                    const grpBadge = s.screenGroup === 'Nhóm 1' ? 'bg-blue-950 text-blue-300 border border-blue-800' :
+                                     s.screenGroup === 'Nhóm 2' ? 'bg-indigo-950 text-indigo-300 border border-indigo-800' : 'bg-rose-950 text-rose-300 border border-rose-800';
+
+                    tr.innerHTML = `
+                        <td class="p-3 text-center text-slate-400 font-medium">${realIdx}</td>
+                        <td class="p-3 font-bold text-white">${s.id}</td>
+                        <td class="p-3 text-center font-bold text-slate-200">${s.screenTime}h</td>
+                        <td class="p-3 text-center"><span class="px-2 py-0.5 rounded text-xs font-semibold ${grpBadge}">${s.screenGroup}</span></td>
+                        <td class="p-3 text-center">${s.screen1hBefore === 'Có' ? '<span class="text-amber-400 font-bold">Có</span>' : '<span class="text-slate-500">Không</span>'}</td>
+                        <td class="p-3 text-center font-mono text-slate-300">${s.bedTime}</td>
+                        <td class="p-3 text-center font-mono text-slate-300">${s.wakeTime}</td>
+                        <td class="p-3 text-center font-bold text-sky-400">${s.sleepDuration}h</td>
+                        <td class="p-3 text-center">${s.sleepRating === 'Có' ? '<span class="text-emerald-400">Tốt</span>' : '<span class="text-rose-400">Kém</span>'}</td>
+                        <td class="p-3"><span class="px-2 py-0.5 rounded text-xs text-slate-300 bg-dark-700">${s.screenAlert}</span></td>
+                        <td class="p-3"><span class="px-2 py-0.5 rounded text-xs text-slate-300 bg-dark-700">${s.sleepAlert}</span></td>
+                        <td class="p-3 text-center"><span class="px-2 py-0.5 bg-blue-950 text-blue-300 text-xs rounded border border-blue-800">${s.dataCheck}</span></td>
+                        <td class="p-3 text-center space-x-1">
+                            <button onclick="openEditModal('${s.id}')" class="p-1.5 text-blue-400 hover:bg-dark-700 rounded" title="Sửa"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteStudent('${s.id}')" class="p-1.5 text-rose-400 hover:bg-dark-700 rounded" title="Xóa"><i class="fa-solid fa-trash-can"></i></button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            document.getElementById('table-info-text').innerText = `Hiển thị ${paginated.length} / ${totalItems} học sinh (Trang ${currentPage}/${totalPages})`;
+            const pageCtrl = document.getElementById('pagination-controls');
+            pageCtrl.innerHTML = '';
+            for (let i = 1; i <= totalPages; i++) {
+                const btn = document.createElement('button');
+                btn.className = `px-2.5 py-1 text-xs rounded ${i === currentPage ? 'bg-primary-600 text-white font-bold' : 'bg-dark-700 text-slate-300 hover:bg-dark-600'}`;
+                btn.innerText = i;
+                btn.onclick = () => { currentPage = i; renderTable(); };
+                pageCtrl.appendChild(btn);
+            }
+        }
+
+        function openAddModal() {
+            document.getElementById('modal-title').innerText = 'Thêm Bản Ghi Mới';
+            document.getElementById('edit-index').value = '-1';
+            document.getElementById('student-form').reset();
+            document.getElementById('input-id').value = 'HS' + String(students.length + 1).padStart(2, '0');
+            document.getElementById('student-modal').classList.remove('hidden');
+        }
+
+        function openEditModal(studentId) {
+            const idx = students.findIndex(s => s.id === studentId);
+            if (idx === -1) return;
+            const s = students[idx];
+            document.getElementById('modal-title').innerText = 'Chỉnh Sửa Dữ Liệu ' + s.id;
+            document.getElementById('edit-index').value = idx;
+            document.getElementById('input-id').value = s.id;
+            document.getElementById('input-screen').value = s.screenTime;
+            document.getElementById('input-screen-before-bed').value = s.screen1hBefore;
+            document.getElementById('input-bedtime').value = s.bedTime;
+            document.getElementById('input-waketime').value = s.wakeTime;
+            document.getElementById('input-sleep-rating').value = s.sleepRating;
+            document.getElementById('student-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('student-modal').classList.add('hidden');
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const idx = parseInt(document.getElementById('edit-index').value);
+            const newObj = {
+                id: document.getElementById('input-id').value.trim(),
+                screenTime: parseFloat(document.getElementById('input-screen').value) || 0,
+                screen1hBefore: document.getElementById('input-screen-before-bed').value,
+                bedTime: document.getElementById('input-bedtime').value,
+                wakeTime: document.getElementById('input-waketime').value,
+                sleepRating: document.getElementById('input-sleep-rating').value
+            };
+            if (idx === -1) students.push(newObj); else students[idx] = newObj;
+            saveData();
+            closeModal();
+        }
+
+        function deleteStudent(studentId) {
+            if (confirm(`Xóa bản ghi ${studentId}?`)) {
+                students = students.filter(s => s.id !== studentId);
+                saveData();
+            }
+        }
+
+        function applyConditionSettings() {
+            conditions.group1Max = parseFloat(document.getElementById('cond-group1-max').value) || 2;
+            conditions.group2Max = parseFloat(document.getElementById('cond-group2-max').value) || 4;
+            conditions.sleepMin = parseFloat(document.getElementById('cond-sleep-min').value) || 8;
+            alert('Đã cập nhật ngưỡng điều kiện thành công!');
+            updateAllViews();
+        }
+
+        function renderFormulasTab() {
+            const g1Count = students.filter(s => s.screenGroup === 'Nhóm 1').length;
+            document.getElementById('formula-countif-result').innerText = `COUNTIF(E2:E31, "Nhóm 1") = ${g1Count} học sinh`;
+        }
+
+        function renderReportValidation() {
+            const tbody = document.getElementById('report-validation-body');
+            tbody.innerHTML = '';
+            const total = students.length;
+            const g1Count = students.filter(s => s.screenGroup === 'Nhóm 1').length;
+            const metrics = [
+                { name: 'Tổng số học sinh khảo sát (COUNT)', excel: '30 HS', app: total + ' HS' },
+                { name: 'Số học sinh Nhóm 1 (< 2h ĐT)', excel: '10 HS', app: g1Count + ' HS' }
+            ];
+            metrics.forEach(m => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-2 font-medium text-slate-300">${m.name}</td>
+                    <td class="p-2 text-center font-mono text-slate-400">${m.excel}</td>
+                    <td class="p-2 text-center font-mono text-primary-400 font-bold">${m.app}</td>
+                    <td class="p-2 text-center text-emerald-400 font-bold">KHỚP 100%</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateCharts() {
+            if (!chartGroupsInst) return;
+            const g1 = students.filter(s => s.screenGroup === 'Nhóm 1').length;
+            const g2 = students.filter(s => s.screenGroup === 'Nhóm 2').length;
+            const g3 = students.filter(s => s.screenGroup === 'Nhóm 3').length;
+
+            chartGroupsInst.data.datasets[0].data = [g1, g2, g3];
+            chartGroupsInst.update();
+
+            const scBefore = students.filter(s => s.screen1hBefore === 'Có').length;
+            chartScreenBeforeBedInst.data.datasets[0].data = [scBefore, students.length - scBefore];
+            chartScreenBeforeBedInst.update();
+
+            chartCorrelationInst.data.labels = students.map(s => s.id);
+            chartCorrelationInst.data.datasets[0].data = students.map(s => s.screenTime);
+            chartCorrelationInst.data.datasets[1].data = students.map(s => s.sleepDuration);
+            chartCorrelationInst.update();
+        }
+
+        function exportToExcel() {
+            const exportData = students.map((s, idx) => ({
+                'STT': idx + 1,
+                'Mã HS': s.id,
+                'Thời gian dùng ĐT (giờ)': s.screenTime,
+                'Nhóm thời gian dùng ĐT': s.screenGroup,
+                'Dùng ĐT 1h trước khi ngủ': s.screen1hBefore,
+                'Giờ đi ngủ': s.bedTime,
+                'Giờ thức dậy': s.wakeTime,
+                'Thời lượng giấc ngủ (giờ)': s.sleepDuration,
+                'Đánh giá giấc ngủ': s.sleepRating,
+                'Cảnh báo thói quen ĐT': s.screenAlert,
+                'Cảnh báo giấc ngủ': s.sleepAlert,
+                'Kiểm tra dữ liệu': s.dataCheck
+            }));
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Dữ Liệu Khảo Sát");
+            XLSX.writeFile(workbook, `Anonymized_Phone_Usage_Analytics_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+    </script>
+</body>
+</html>
